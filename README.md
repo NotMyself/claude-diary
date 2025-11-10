@@ -1,103 +1,157 @@
 # Claude Code Memory System
 
-A long-term memory plugin for Claude Code that enables learning from past interactions through structured diary entries and periodic reflection.
+A fully automated long-term memory plugin for Claude Code that learns from your coding sessions and continuously improves Claude's understanding of your preferences, patterns, and workflows.
 
 ## Overview
 
-This plugin implements a two-phase memory system inspired by [Cat Wu's approach at Anthropic](https://www.youtube.com/watch?v=IDSAMqip6ms&t=352s):
+This plugin implements an automated memory system inspired by [Cat Wu's approach at Anthropic](https://www.youtube.com/watch?v=IDSAMqip6ms&t=352s). It creates a feedback loop where Claude learns from every session and automatically updates its behavior.
 
-1. **Diary Entries**: Document what Claude learned from each session
-2. **Reflection**: Analyze patterns across multiple sessions and propose actionable updates to `CLAUDE.md`
+### How It Works (Automated Flow)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. You work with Claude Code (normal session)              │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│  2. Session ends → SessionEnd hook triggers                 │
+│     → Diary entry auto-generated                            │
+│     → Saved to ~/.claude/memory/diary/                      │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│  3. Diary entries accumulate (5-10+ recommended)            │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│  4. You run /reflect (ad hoc, whenever you want)            │
+│     → Checks processed.log for unprocessed entries          │
+│     → Analyzes patterns across diary entries                │
+│     → Creates reflection document                           │
+│     → Automatically updates CLAUDE.md with new rules        │
+│     → Updates processed.log to prevent re-analysis          │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│  5. Future sessions → Claude follows updated rules          │
+│     → Cycle repeats, memory improves over time              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Features
+
+- **Fully Automated**: Diary entries auto-generated at session end via SessionEnd hook
+- **Ad Hoc Reflection**: Run `/reflect` whenever you want to analyze accumulated entries
+- **Automatic CLAUDE.md Updates**: Reflection directly updates your CLAUDE.md with actionable rules
+- **Incremental Learning**: processed.log prevents duplicate analysis, enables continuous learning
+- **Pattern Recognition**: Identifies patterns appearing 2+ times (strong patterns: 3+)
+- **Signal vs Noise**: Distinguishes persistent preferences from one-off requests
+
+### What Gets Captured
+
+**Diary entries capture:**
+- Design decisions and architectural choices
+- PR review feedback (avoiding "AI-looking" code)
+- User preferences (commit style, testing requirements, workflow)
+- Challenges encountered and solutions that worked
+- Code patterns and technologies used
+
+**Reflection extracts:**
+- PR review feedback patterns
+- Persistent user preferences (2+ occurrences)
+- Design decisions that worked
+- Anti-patterns to avoid
+- Efficiency lessons
+- Project-specific patterns
 
 The key insight: Synthesizing memory from multiple sessions helps identify true patterns versus one-off requests (e.g., "always use TypeScript strict mode" vs. "make this button pink").
 
 ## Installation
 
-### Option 1: Install as Plugin
+### Quick Start (Recommended)
 
-1. Clone or download this repository
-2. Create a local marketplace file (or add to existing one):
-
+1. **Clone this repository**:
 ```bash
-mkdir -p ~/.claude/marketplaces/local
+git clone <repository-url> cc-memory
+cd cc-memory
 ```
 
-Create `~/.claude/marketplaces/local/marketplace.json`:
-
-```json
-{
-  "name": "local-plugins",
-  "owner": {
-    "name": "Local"
-  },
-  "plugins": [
-    {
-      "name": "claude-memory",
-      "source": "/path/to/cc-memory",
-      "description": "Long-term memory system for Claude Code"
-    }
-  ]
-}
-```
-
-3. In Claude Code, install the plugin from your local marketplace
-
-### Option 2: Manual Setup
-
-Copy the commands to your global Claude Code commands directory:
-
+2. **Install commands**:
 ```bash
 cp commands/*.md ~/.claude/commands/
 ```
 
-## Usage
-
-### Creating Diary Entries
-
-**Automatic (Recommended)**: Install the SessionEnd hook for automatic diary generation:
-
+3. **Install SessionEnd hook** (for auto-diary generation):
 ```bash
 mkdir -p ~/.claude/hooks
 cp hooks/session-end.sh ~/.claude/hooks/session-end.sh
 chmod +x ~/.claude/hooks/session-end.sh
 ```
 
-Now a diary entry will be automatically created at the end of every Claude Code session.
+4. **Done!** The system is now active:
+   - Diary entries will auto-generate at session end
+   - Run `/reflect` whenever you want to analyze patterns
+   - Your CLAUDE.md will automatically improve over time
 
-**Manual**: You can also run the diary command manually:
+### Alternative: Install as Plugin
 
-```bash
-/diary
-```
+See [INSTALL.md](INSTALL.md) for detailed plugin installation instructions using Claude Code's local marketplace.
 
-This will:
-- Parse the current session transcript from `~/.claude/projects/...`
-- Extract user messages, assistant actions, challenges, and solutions
-- Generate a structured diary entry at `~/.claude/memory/diary/YYYY-MM-DD-session-N.md`
+## Usage
 
-**Diary entries capture:**
-- Task summary and goals
-- Design decisions made (architectural choices, technology selections, trade-offs)
-- Actions taken (files edited, commands run, tools used)
-- Code review & PR feedback (avoiding "AI-looking" code, test coverage, style)
-- Challenges encountered (errors, failed approaches)
-- Solutions applied (what worked and why)
-- User preferences observed (commit style, testing requirements, workflow preferences)
-- Code patterns and architectural decisions
-- Project context and technologies
+### The Automated Workflow
 
-### Reflecting on Patterns
+Once installed, the system works automatically with minimal intervention:
 
-After accumulating several diary entries (recommended: 5-10+), run:
+#### Phase 1: Diary Generation (Automatic)
+
+**Just work normally with Claude Code.** When your session ends, the SessionEnd hook automatically:
+1. Parses the session transcript from `~/.claude/projects/...`
+2. Extracts key information (decisions, challenges, preferences, patterns)
+3. Creates a diary entry at `~/.claude/memory/diary/YYYY-MM-DD-session-N.md`
+
+**Manual override**: Run `/diary` anytime to create an entry for the current session.
+
+**What gets captured in diary entries:**
+- Task summary and design decisions
+- PR review feedback ("avoid AI-looking code", test coverage requirements)
+- User preferences (commit style, branch naming, testing workflows)
+- Challenges encountered and solutions that worked
+- Code patterns and technologies used
+
+#### Phase 2: Reflection (Ad Hoc)
+
+**When to run**: After accumulating 5-10+ diary entries (recommended: weekly or monthly)
+
+**How to run**: Simply execute:
 
 ```bash
 /reflect
 ```
 
-**Filter options:**
+**What happens automatically:**
+1. ✅ Checks `processed.log` → skips already-analyzed entries
+2. ✅ Reads and analyzes unprocessed diary entries
+3. ✅ Identifies patterns (2+ occurrences = pattern, 3+ = strong pattern)
+4. ✅ Extracts actionable insights across 6 categories:
+   - PR review feedback patterns
+   - Persistent user preferences
+   - Design decisions that worked
+   - Anti-patterns to avoid
+   - Efficiency lessons
+   - Project-specific patterns
+5. ✅ Creates reflection document at `~/.claude/memory/reflections/YYYY-MM-reflection-N.md`
+6. ✅ **Automatically appends new rules to `~/.claude/CLAUDE.md`**
+7. ✅ Updates `processed.log` to prevent re-analysis
+
+**Advanced filtering options:**
 
 ```bash
-# Analyze last 20 unprocessed entries (default: skips already-processed entries)
+# Analyze last 20 unprocessed entries
 /reflect last 20 entries
 
 # Analyze specific date range
@@ -119,18 +173,74 @@ After accumulating several diary entries (recommended: 5-10+), run:
 /reflect reprocess 2025-11-07-session-1.md
 ```
 
-This will:
-- Check `~/.claude/memory/reflections/processed.log` for already-analyzed entries
-- Read and analyze unprocessed diary entries
-- Identify patterns that appear 2+ times (persistent preferences)
-- Extract PR review feedback patterns (avoiding "AI-looking" code)
-- Distinguish project-specific patterns from universal ones
-- Identify effective approaches and anti-patterns to avoid
-- Generate a reflection document at `~/.claude/memory/reflections/YYYY-MM-reflection-N.md`
-- **Automatically append actionable rules to your `~/.claude/CLAUDE.md` file**
-- Update `processed.log` with analyzed entries
+#### Phase 3: Continuous Improvement (Automatic)
 
-**Processed Entries Tracking**: The system maintains `~/.claude/memory/reflections/processed.log` to track which diary entries have been analyzed. This prevents duplicate analysis and allows you to run `/reflect` ad hoc as new diary entries accumulate.
+Your updated `CLAUDE.md` is read into every new session, so Claude automatically:
+- Follows your commit style preferences
+- Avoids anti-patterns you've identified
+- Matches your code quality standards
+- Uses your preferred testing approaches
+- Adapts to project-specific patterns
+
+**The cycle repeats**: More sessions → More diary entries → Periodic reflections → Smarter CLAUDE.md → Better Claude behavior
+
+### Quick Example
+
+Here's how the system learns in practice:
+
+**Week 1: Sessions Accumulate**
+```
+Session 1: You work on React app, use conventional commits
+  → Diary created: 2025-11-01-session-1.md
+
+Session 2: PR reviewer says "add test coverage"
+  → Diary created: 2025-11-02-session-1.md
+
+Session 3: You use conventional commits again
+  → Diary created: 2025-11-03-session-1.md
+
+Session 4: PR reviewer says "code looks AI-generated, simplify"
+  → Diary created: 2025-11-04-session-1.md
+
+Session 5: You use conventional commits + run tests before commit
+  → Diary created: 2025-11-05-session-1.md
+```
+
+**Week 1 End: Run Reflection**
+```bash
+$ /reflect
+
+Analyzing 5 unprocessed diary entries...
+
+Patterns identified:
+✅ Conventional commit format (5/5 sessions) → Strong pattern
+✅ Test coverage requested (2/5 sessions) → Pattern
+✅ Avoid verbose/AI-looking code (1/5 sessions) → Noted
+
+Reflection created: 2025-11-reflection-1.md
+CLAUDE.md updated with 3 new rules:
+  - git commits: use conventional format (feat:, fix:, refactor:)
+  - testing: add test coverage for new features
+  - code style: avoid verbose patterns, match existing code
+
+processed.log updated: 5 entries marked as analyzed
+```
+
+**Week 2+: Claude Adapts**
+
+In all future sessions, Claude now:
+- ✅ Automatically uses conventional commit format
+- ✅ Suggests adding tests for new features
+- ✅ Writes simpler, less verbose code
+
+**Month 2: More Learning**
+```
+10 more sessions → 10 more diary entries
+Run /reflect again → Identifies new patterns
+CLAUDE.md grows → Claude gets even smarter
+```
+
+**The Result**: Over time, Claude learns your exact preferences, coding style, and workflow patterns without you having to repeat yourself.
 
 ## Directory Structure
 
