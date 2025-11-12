@@ -56,3 +56,7 @@ build/
 tmp/
 temp/
 *.tmp
+
+# Internal development files
+SUMMARY.md
+scope.md
