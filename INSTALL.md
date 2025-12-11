@@ -115,6 +115,59 @@ You should see both `diary/` and `reflections/` directories.
    - Run `/reflect`
    - Verify a reflection file was created: `ls -la ~/.claude/memory/reflections/`
 
+### 4. Set Up PreCompact Hook (Optional - For Automatic Diary Generation)
+
+The PreCompact hook automatically generates diary entries before Claude Code compacts long conversations (200+ messages).
+
+**Step 1: Install the hook script**
+
+```bash
+mkdir -p ~/.claude/hooks
+cp hooks/pre-compact.sh ~/.claude/hooks/pre-compact.sh
+chmod +x ~/.claude/hooks/pre-compact.sh
+```
+
+**Step 2: Configure the hook in settings**
+
+Add the following to `~/.claude/settings.json` (global) or `.claude/settings.local.json` (project-specific):
+
+```json
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/pre-compact.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Alternative: Use the interactive command**
+
+```bash
+/hooks
+```
+
+Then select:
+- Hook event: `PreCompact`
+- Matcher: `auto` (for automatic compaction) or `manual` (for `/compact` command)
+- Command: `bash ~/.claude/hooks/pre-compact.sh`
+
+**Verify hook configuration**
+
+Check that your settings file contains the hook configuration:
+
+```bash
+cat ~/.claude/settings.json | grep -A 10 "PreCompact"
+```
+
 ## Troubleshooting
 
 ### "Command not found: /diary"
@@ -152,6 +205,27 @@ You should see both `diary/` and `reflections/` directories.
 1. Run `/diary` first to create some entries
 2. Check that diary files exist: `ls ~/.claude/memory/diary/`
 3. Verify file permissions: `ls -la ~/.claude/memory/diary/`
+
+### PreCompact hook not running
+
+**Problem**: The hook script exists but diary entries aren't being automatically generated before compaction.
+
+**Solutions**:
+1. Check that the hook is configured in `settings.json`:
+   ```bash
+   cat ~/.claude/settings.json | grep -A 10 "PreCompact"
+   ```
+2. Verify the hook script is executable:
+   ```bash
+   ls -la ~/.claude/hooks/pre-compact.sh
+   # Should show -rwxr-xr-x permissions
+   ```
+3. Make it executable if needed:
+   ```bash
+   chmod +x ~/.claude/hooks/pre-compact.sh
+   ```
+4. Check that you have the correct hook configuration (both the script file AND the settings.json configuration are required)
+5. Restart Claude Code after adding hook configuration
 
 ## Updating the Plugin
 

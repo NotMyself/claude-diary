@@ -30,7 +30,35 @@ cp hooks/pre-compact.sh ~/.claude/hooks/pre-compact.sh
 chmod +x ~/.claude/hooks/pre-compact.sh
 ```
 
-4. **Use the system**:
+4. **Configure the hook in settings**:
+
+   Add the following to `~/.claude/settings.json` (global) or `.claude/settings.local.json` (project-specific):
+
+   ```json
+   {
+     "hooks": {
+       "PreCompact": [
+         {
+           "matcher": "auto",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "bash ~/.claude/hooks/pre-compact.sh"
+             }
+           ]
+         }
+       ]
+     }
+   }
+   ```
+
+   Alternatively, use the interactive command:
+   ```bash
+   /hooks
+   ```
+   Then select `PreCompact` event, `auto` matcher, and enter `bash ~/.claude/hooks/pre-compact.sh` as the command.
+
+5. **Use the system**:
    - Run `/diary` after important sessions (or let the PreCompact hook auto-generate)
    - After any collection of diary entries, run `/reflect` to analyze patterns
    - `CLAUDE.md` automatically updated with learnings
